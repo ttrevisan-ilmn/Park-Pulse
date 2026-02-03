@@ -3,7 +3,7 @@ import path from "path";
 import { PARKS } from "@/lib/parks";
 import { WaitTimeSnapshot, ParkLiveData } from "@/lib/types";
 
-const DATA_FILE_PATH = path.join(process.cwd(), "data", "wait_times.json");
+const DATA_FILE_PATH = path.join(process.env.NODE_ENV === 'production' ? '/tmp' : process.cwd(), "wait_times.json");
 
 /* Helper to ensure directory exists */
 async function ensureDirectoryExistence(filePath: string) {
@@ -11,7 +11,8 @@ async function ensureDirectoryExistence(filePath: string) {
     try {
         await fs.access(dirname);
     } catch (e) {
-        await fs.mkdir(dirname, { recursive: true });
+        // In /tmp we might not need to mkdir, but good practice
+        await fs.mkdir(dirname, { recursive: true }).catch(() => { });
     }
 }
 
@@ -56,21 +57,22 @@ export async function getWaitTimes() {
     }
 
     // 3. Append and Save
-    // Check if we already have a recent snapshot (e.g. within last 1 minute) to avoid dupes on frequent refresh
-    const lastSnapshot = history[history.length - 1];
-    const lastTime = lastSnapshot ? new Date(lastSnapshot.timestamp).getTime() : 0;
-    const currentTime = new Date(timestamp).getTime();
+    try {
+        const lastSnapshot = history[history.length - 1];
+        const lastTime = lastSnapshot ? new Date(lastSnapshot.timestamp).getTime() : 0;
+        const currentTime = new Date(timestamp).getTime();
 
-    if (currentTime - lastTime > 60 * 1000) { // Only save every minute
-        history.push(currentSnapshot);
-        // Limit history size (e.g., last 1000 entries)
-        if (history.length > 2000) {
-            history = history.slice(-2000);
+        if (currentTime - lastTime > 60 * 1000) { // Only save every minute
+            history.push(currentSnapshot);
+            // Limit history size
+            if (history.length > 2000) {
+                history = history.slice(-2000);
+            }
+            await fs.writeFile(DATA_FILE_PATH, JSON.stringify(history, null, 2));
         }
-        await fs.writeFile(DATA_FILE_PATH, JSON.stringify(history, null, 2));
-    } else {
-        // Just update the latest snapshot in memory for return, but don't save file if too soon?
-        // Actually, user wants "current" time. We should return the fetched one even if we don't save history.
+    } catch (error) {
+        console.warn("Failed to save history (likely read-only fs):", error);
+        // Do not crash the request, just proceed with current data
     }
 
     return { current: currentSnapshot, history };
