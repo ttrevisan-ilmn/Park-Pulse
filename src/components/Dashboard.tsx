@@ -232,7 +232,7 @@ export function Dashboard({ initialData, error }: DashboardProps) {
                     {ride.name}
                     {expandedRideId === ride.id && (
                         <div className="mt-4 h-48 w-full md:w-[400px]">
-                            <WaitTimeChart rideId={ride.id} history={data?.history || []} />
+                            <WaitTimeChart rideId={ride.id} ride={ride} history={data?.history || []} />
                         </div>
                     )}
                 </>
@@ -482,7 +482,7 @@ export function Dashboard({ initialData, error }: DashboardProps) {
                                                     High of Day: <span className="font-bold text-gray-700 dark:text-gray-300">{getHighOfDay(ride)} min</span>
                                                 </div>
                                             </div>
-                                            <WaitTimeChart rideId={ride.id} history={data?.history || []} />
+                                            <WaitTimeChart rideId={ride.id} ride={ride} history={data?.history || []} />
                                         </div>
                                     )}
                                 </div>
