@@ -20,11 +20,12 @@ import {
     useSortable,
 } from "@dnd-kit/sortable";
 import { cn } from "@/lib/utils";
-import { GripVertical, ChevronUp, ChevronDown, Star } from "lucide-react";
+import { GripVertical, ChevronUp, ChevronDown, Star, Bell, TrendingUp } from "lucide-react";
 import { useState, useMemo } from "react";
 import { getLand, getTicketClass } from "@/lib/parks";
 import { WaitTimeChart } from "../WaitTimeChart";
 import { WaitTimeSparkline } from "../WaitTimeSparkline";
+import { Alert } from "@/hooks/useAlerts";
 
 // Type definitions for internal usage in this component
 export type SortField = 'name' | 'waitTime' | 'land' | 'status' | 'ticket' | 'peak' | 'favorite';
@@ -52,6 +53,8 @@ interface RideTableProps {
     TARGET_HOURS: number[];
     favorites: string[];
     toggleFavorite: (id: string) => void;
+    alerts: Alert[];
+    onToggleAlert: (id: string, name: string) => void;
 }
 
 // Draggable Header Component
@@ -135,13 +138,15 @@ export function RideTable({
     showHours,
     TARGET_HOURS,
     favorites,
-    toggleFavorite
+    toggleFavorite,
+    alerts,
+    onToggleAlert
 }: RideTableProps) {
 
     const baseColumns: ColumnDef[] = [
-        { id: 'favorite', label: <Star className="w-4 h-4" />, field: 'favorite', isSortable: true, className: "w-12 text-center" },
         { id: 'name', label: 'Ride Name', field: 'name', isSortable: true, className: "w-64" },
         { id: 'waitTime', label: 'Wait Time', field: 'waitTime', isSortable: true, className: "w-24" },
+        { id: 'actions', label: 'Actions', isSortable: false, className: "w-20 text-center" },
         { id: 'ticket', label: 'Ticket', field: 'ticket', isSortable: true, className: "w-20" },
         { id: 'status', label: 'Status', field: 'status', isSortable: true, className: "w-24" },
         { id: 'land', label: 'Land', field: 'land', isSortable: true, className: "w-40" },
@@ -157,10 +162,8 @@ export function RideTable({
     }));
 
     const allInitialIds = [
-        'favorite',
-        ...baseColumns.slice(1, 7).map(c => c.id), // skip favorite since we added it manually
+        ...baseColumns.map(c => c.id),
         ...hourlyColumns.map(c => c.id),
-        'trend'
     ];
 
     const [columnOrder, setColumnOrder] = useState<string[]>(allInitialIds);
@@ -202,36 +205,44 @@ export function RideTable({
     };
 
     const renderCell = (ride: Ride, colId: string) => {
-        if (colId === 'favorite') {
+        if (colId === 'actions') {
             const isFav = favorites.includes(ride.id);
+            const hasAlert = alerts.some(a => a.rideId === ride.id);
             return (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(ride.id);
-                    }}
-                    className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-full transition-colors"
-                >
-                    <Star
+                <div className="flex gap-1 justify-center">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleAlert(ride.id, ride.name);
+                        }}
                         className={cn(
-                            "w-4 h-4",
-                            isFav ? "text-yellow-500 fill-current" : "text-gray-300"
+                            "p-1 rounded-full transition-colors focus:outline-none",
+                            hasAlert
+                                ? "text-blue-500 hover:text-blue-600 bg-blue-50 dark:bg-blue-900/20"
+                                : "text-gray-300 hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700"
                         )}
-                    />
-                </button>
+                        title={hasAlert ? "Remove alert" : "Set wait time alert"}
+                    >
+                        <Bell className={cn("w-4 h-4", hasAlert && "fill-current")} />
+                    </button>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(ride.id);
+                        }}
+                        className={cn("p-1 rounded-full transition-colors focus:outline-none",
+                            isFav
+                                ? "text-yellow-500 hover:text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20"
+                                : "text-gray-300 hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700"
+                        )}
+                    >
+                        <Star className={cn("w-4 h-4", isFav && "fill-current")} />
+                    </button>
+                </div>
             );
         }
         if (colId === 'name') {
-            return (
-                <>
-                    {ride.name}
-                    {expandedRideId === ride.id && (
-                        <div className="mt-4 h-48 w-full md:w-[400px]">
-                            <WaitTimeChart rideId={ride.id} ride={ride} history={history} />
-                        </div>
-                    )}
-                </>
-            );
+            return <div className="font-medium text-gray-900 dark:text-white">{ride.name}</div>;
         }
         if (colId === 'land') {
             const land = getLand(ride.name);
@@ -328,7 +339,7 @@ export function RideTable({
                     collisionDetection={closestCenter}
                     onDragEnd={handleDragEnd}
                 >
-                    <table className="w-full text-left text-sm relative">
+                    <table className="w-full text-left text-sm relative border-collapse">
                         <thead className="bg-gray-50 dark:bg-zinc-900 border-b">
                             <tr>
                                 <SortableContext items={visibleColumns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
@@ -347,24 +358,50 @@ export function RideTable({
                         </thead>
                         <tbody className="divide-y dark:divide-zinc-700">
                             {rides.map((ride) => (
-                                <tr
-                                    key={ride.id}
-                                    className="group hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer"
-                                    onClick={() => setExpandedRideId(expandedRideId === ride.id ? null : ride.id)}
-                                >
-                                    {visibleColumns.map((col, idx) => (
-                                        <td
-                                            key={col.id}
-                                            className={cn(
-                                                "px-6 py-4",
-                                                idx === 0 && "sticky left-0 z-10 bg-white group-hover:bg-gray-50 dark:bg-zinc-800 dark:group-hover:bg-zinc-700/50 shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] transition-colors",
-                                                col.className
-                                            )}
-                                        >
-                                            {renderCell(ride, col.id)}
-                                        </td>
-                                    ))}
-                                </tr>
+                                <>
+                                    <tr
+                                        key={ride.id}
+                                        className={cn(
+                                            "group transition-colors cursor-pointer",
+                                            expandedRideId === ride.id
+                                                ? "bg-blue-50/50 dark:bg-blue-900/10"
+                                                : "hover:bg-gray-50 dark:hover:bg-zinc-700/50"
+                                        )}
+                                        onClick={() => setExpandedRideId(expandedRideId === ride.id ? null : ride.id)}
+                                    >
+                                        {visibleColumns.map((col, idx) => (
+                                            <td
+                                                key={col.id}
+                                                className={cn(
+                                                    "px-6 py-4",
+                                                    idx === 0 && "sticky left-0 z-10 bg-white group-hover:bg-gray-50 dark:bg-zinc-800 dark:group-hover:bg-zinc-700/50 shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] transition-colors",
+                                                    expandedRideId === ride.id && idx === 0 && "bg-blue-50/50 dark:bg-blue-900/10 group-hover:bg-blue-50/50",
+                                                    col.className
+                                                )}
+                                            >
+                                                {renderCell(ride, col.id)}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                    {expandedRideId === ride.id && (
+                                        <tr className="bg-blue-50/30 dark:bg-blue-900/5 animate-in fade-in slide-in-from-top-2">
+                                            <td colSpan={visibleColumns.length} className="px-6 py-4">
+                                                <div className="flex flex-col gap-4">
+                                                    <div className="flex justify-between items-center">
+                                                        <h4 className="text-sm font-semibold">Live Wait Time Trend</h4>
+                                                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                                                            <TrendingUp className="w-3 h-3" />
+                                                            High of Day: <span className="font-bold text-gray-700 dark:text-gray-300">{getHighOfDay(ride)} min</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-full h-64">
+                                                        <WaitTimeChart rideId={ride.id} ride={ride} history={history} />
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </>
                             ))}
                         </tbody>
                     </table>

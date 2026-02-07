@@ -78,22 +78,26 @@ export function HeaderToolbar({
 
                     <div className="bg-gray-100 dark:bg-zinc-800 p-1 rounded-lg flex border dark:border-zinc-700">
                         <button
+                            id="view-toggle-grid"
                             onClick={() => setViewMode('grid')}
                             className={cn(
                                 "p-2 rounded-md transition-colors",
                                 viewMode === 'grid' ? "bg-white shadow-sm dark:bg-zinc-700" : "hover:bg-gray-200 dark:hover:bg-zinc-600 text-gray-500"
                             )}
                             title="Grid View"
+                            aria-label="Grid View"
                         >
                             <LayoutGrid className="w-4 h-4" />
                         </button>
                         <button
+                            id="view-toggle-list"
                             onClick={() => setViewMode('list')}
                             className={cn(
                                 "p-2 rounded-md transition-colors",
                                 viewMode === 'list' ? "bg-white shadow-sm dark:bg-zinc-700" : "hover:bg-gray-200 dark:hover:bg-zinc-600 text-gray-500"
                             )}
                             title="List View"
+                            aria-label="List View"
                         >
                             <ListIcon className="w-4 h-4" />
                         </button>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { getWaitTimes } from "@/lib/data-service";
 import { WaitTimeSnapshot, Ride } from "@/lib/types";
+
 import { PARKS, PARK_NAMES, getTicketClass, getLand } from "@/lib/parks";
 import { StatsHeader } from "./dashboard/StatsHeader";
 import { HeaderToolbar } from "./dashboard/HeaderToolbar";
@@ -22,7 +22,7 @@ export function Dashboard() {
     const [searchQuery, setSearchQuery] = useState("");
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [expandedRideId, setExpandedRideId] = useState<string | null>(null);
-    const [sortField, setSortField] = useState<SortField>('favorite');
+    const [sortField, setSortField] = useState<SortField>('waitTime');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [showHours, setShowHours] = useState(false);
 
@@ -32,7 +32,11 @@ export function Dashboard() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const result = await getWaitTimes();
+            const response = await fetch('/api/wait-times');
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+            const result = await response.json();
             setData(result);
         } catch (error) {
             console.error("Failed to fetch wait times:", error);
@@ -163,8 +167,8 @@ export function Dashboard() {
         return { label: "Very Busy", color: "text-red-600" };
     }, [averageWaitTime]);
 
-
     if (loading && !data) {
+        // ... (Skeleton return)
         return (
             <main className="min-h-screen bg-white dark:bg-black p-4 md:p-8 font-sans">
                 <div className="max-w-7xl mx-auto">
@@ -249,6 +253,8 @@ export function Dashboard() {
                         TARGET_HOURS={TARGET_HOURS}
                         favorites={favorites}
                         toggleFavorite={toggleFavorite}
+                        alerts={alerts}
+                        onToggleAlert={handleToggleAlert}
                     />
                 )}
             </div>
