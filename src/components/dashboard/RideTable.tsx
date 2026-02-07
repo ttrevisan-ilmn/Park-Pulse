@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { Ride, WaitTimeSnapshot } from "@/lib/types";
 import { format } from "date-fns";
 import { CSS } from "@dnd-kit/utilities";
@@ -22,7 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 import { cn } from "@/lib/utils";
 import { GripVertical, ChevronUp, ChevronDown, Star, Bell, TrendingUp } from "lucide-react";
-import { useState, useMemo } from "react";
+
 import { getLand, getTicketClass } from "@/lib/parks";
 import { WaitTimeChart } from "../WaitTimeChart";
 import { WaitTimeSparkline } from "../WaitTimeSparkline";
@@ -359,7 +359,7 @@ export function RideTable({
                         </thead>
                         <tbody className="divide-y dark:divide-zinc-700">
                             {rides.map((ride) => (
-                                <React.Fragment key={ride.id}>
+                                <Fragment key={ride.id}>
                                     <tr
                                         className={cn(
                                             "group transition-colors cursor-pointer",
@@ -401,7 +401,7 @@ export function RideTable({
                                             </td>
                                         </tr>
                                     )}
-                                </React.Fragment>
+                                </Fragment>
                             ))}
                         </tbody>
                     </table>
