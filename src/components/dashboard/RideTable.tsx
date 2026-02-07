@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import { Ride, WaitTimeSnapshot } from "@/lib/types";
 import { format } from "date-fns";
 import { CSS } from "@dnd-kit/utilities";
@@ -358,9 +359,8 @@ export function RideTable({
                         </thead>
                         <tbody className="divide-y dark:divide-zinc-700">
                             {rides.map((ride) => (
-                                <>
+                                <React.Fragment key={ride.id}>
                                     <tr
-                                        key={ride.id}
                                         className={cn(
                                             "group transition-colors cursor-pointer",
                                             expandedRideId === ride.id
@@ -401,7 +401,7 @@ export function RideTable({
                                             </td>
                                         </tr>
                                     )}
-                                </>
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>
